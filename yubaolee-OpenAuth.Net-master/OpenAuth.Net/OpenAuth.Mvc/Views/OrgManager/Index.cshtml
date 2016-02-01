@@ -1,0 +1,147 @@
+﻿@{
+    string _prefix = "org";
+    var _treeId = _prefix + "Tree";
+    var _gridId = _prefix + "Grid";
+    var _treeDetail = _prefix + "Detail";
+}
+@{ Html.RenderAction("MenuHeader", "Home");}
+
+<div class="bjui-pageContent tableContent">
+    <div class="clearfix">
+        <div style="float: left; width: 220px; overflow: auto;" class="table table-bordered">
+            <ul id="@_treeId" class="ztree"></ul>
+        </div>
+
+        <div id="@_treeDetail" style="margin-left: 225px; ">
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var selectedId = 0;
+    var grid;
+    $(document).ready(function () {
+        initZtree();
+        LoadOrg();
+    });
+    //加载数据到datagrid
+    function LoadOrg() {
+        //b-jui的datagrid需要重新处理HTML
+        $('#@_treeDetail').empty()
+            .append('<table id="@_gridId" class="table table-bordered table-hover table-striped table-top"></table>');
+       grid = $('#@_gridId').datagrid({
+            showToolbar: false,
+            filterThead: false,
+            columns: [
+            {
+                name: 'Id',
+                label: 'Id',
+                attrs: { readonly: 'readonly' },
+                hide: true
+            },
+            {
+                name: 'ParentId',
+                label: '上级机构ID',
+                attrs: { readonly: 'readonly'},
+                hide: true
+            },
+              {
+                  name: 'CascadeId',
+                  label: '唯一标识',
+                  attrs: { readonly: 'readonly'}
+              },
+              {
+                  name: 'Name',
+                  label: '机构名称'
+              },
+              {
+                  name: 'ParentName',
+                  label: '上级机构',
+                  edit: false,
+                  attrs: { readonly: 'readonly' }
+              },
+            {
+                name: 'Status',
+                label: '状态',
+                type: 'select',
+                align: 'center',
+                items:[{'0':'正常'}, {'1':'禁用'}]
+            },
+              {
+                  name: 'CreateTime',
+                  label: '登记日期',
+                  type: 'date',
+                  pattern: 'yyyy-MM-dd HH:mm:ss'
+              }
+            ],
+            dataUrl: 'OrgManager/LoadChildren?Id=' + selectedId,
+            editUrl: 'OrgManager/EditOrg',
+            editMode: 'dialog',
+            fullGrid: true,
+            showLinenumber: true,
+            showCheckboxcol: true,
+            paging: false,
+            filterMult: false,
+            showTfoot: false,
+            height:700,
+            editCallback: function (delResult) {
+                if (delResult.statusCode == "200")
+                    Init(selectedId);
+                else {
+                    $(this).alertmsg('warn', delResult.message);
+                }
+            }
+        });
+    }
+    function zTreeOnClick(event, treeId, treeNode) {
+        selectedId = treeNode.Id;
+        LoadOrg();
+    }
+
+    function initZtree() {
+        var setting = {
+            view: {
+                selectedMulti: false
+            },
+            data: {
+                key: {
+                    name: 'Name',
+                    title: 'Name'
+                },
+                simpleData: {
+                    enable: true,
+                    idKey: 'Id',
+                    pIdKey: 'ParentId',
+                    rootPId: 'null'
+                }
+            },
+            callback: {
+                onClick: zTreeOnClick
+            }
+        };
+        $.getJSON('OrgManager/LoadOrg', function (json) {
+            var zTreeObj = $.fn.zTree.init($('#@_treeId'), setting, json);
+            zTreeObj.expandAll(true);
+        });
+    }
+
+    function refreshOrgGrid() {
+        $('#@_gridId').datagrid('refresh');
+    }
+
+    //删除
+    function delOrg() {
+        var selected = getSelected('#@_gridId',2);
+        if (selected == null) return;
+
+        $.getJSON('OrgManager/DelOrg?Id=' + selected, function (data) {
+            if (data.statusCode == "200")
+                refreshOrgGrid();
+            else {
+                $(this).alertmsg('warn', data.message);
+            }
+        });
+    }
+
+    //@@ sourceURL=orgIndex.js
+</script>
